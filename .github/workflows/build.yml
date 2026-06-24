@@ -46,6 +46,7 @@ jobs:
           repository: ${{ env.SYSTEM_REPO }}
           token: ${{ secrets.SYSTEM_REPO_TOKEN }}
           path: system
+          ref: main
 
       - name: Bump image tag
         run: |
