@@ -1,0 +1,59 @@
+name: build-and-push
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/frontend
+  APP_VALUES_PATH: values/frontend.yaml
+  SYSTEM_REPO: ${{ github.repository_owner }}/system
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: vars
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.vars.outputs.sha }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Checkout system repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SYSTEM_REPO }}
+          token: ${{ secrets.SYSTEM_REPO_TOKEN }}
+          path: system
+
+      - name: Bump image tag
+        run: |
+          cd system
+          NEW="${{ steps.vars.outputs.sha }}"
+          sed -i -E "s|(tag: ).*|\1\"${NEW}\"|" "${APP_VALUES_PATH}"
+          git config user.name  "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git add "${APP_VALUES_PATH}"
+          git commit -m "ci: frontend -> ${NEW}" || echo "no change"
+          git push
