@@ -55,6 +55,7 @@ jobs:
           sed -i -E "s|(tag: ).*|\1\"${NEW}\"|" "${APP_VALUES_PATH}"
           git config user.name  "ci-bot"
           git config user.email "ci-bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.SYSTEM_REPO_TOKEN }}@github.com/${{ env.SYSTEM_REPO }}.git
           git add "${APP_VALUES_PATH}"
           git commit -m "ci: frontend -> ${NEW}" || echo "no change"
           git push
